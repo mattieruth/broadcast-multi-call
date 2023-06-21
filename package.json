@@ -1,0 +1,14 @@
+{
+  "name": "broadcast-multi-call",
+  "version": "0.0.0",
+  "description": "Broadcast multi call demo",
+  "main": "index.js",
+  "scripts": {
+    "start": "serve -l 8015 src/"
+  },
+  "author": "James Hush <james@daily.co> (https://www.daily.co/)",
+  "license": "MIT",
+  "dependencies": {
+    "serve": "^14.2.0"
+  }
+}

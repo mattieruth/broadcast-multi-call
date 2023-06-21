@@ -1,0 +1,208 @@
+<html>
+  <head>
+    <title>stream local video file</title>
+    <script src="https://unpkg.com/@daily-co/daily-js"></script>
+  </head>
+  <body onload="main()">
+    <div id="local-controls" style="width: 50%; float: left">
+      <button onclick="join(1)">join 1</button>
+      <button onclick="join(2)">join 2</button>
+      <button onclick="join(3)">join 3</button>
+      <button onclick="joinSpeaker()">join as speaker</button>
+      <button onclick="leave()">leave</button><br />
+      <hr />
+    </div>
+    <div id="videos" style="margin-left: 50%"></div>
+
+    <script>
+      function main() {
+        setupCallObject();
+        setupIFrame();
+      }
+
+      function setupCallObject() {
+        const urlParams = new URLSearchParams(window.location.search);
+        window.call = DailyIframe.createCallObject({
+          dailyConfig: {
+            url,
+            v2CamAndMic: true,
+          },
+          startAudioOff: true,
+        });
+        window.callObject = window.call;
+        call.on("track-started", displayTrack);
+        call.on("track-stopped", destroyTrack);
+        call.on("joined-meeting", handleJoin);
+        call.on("error", (e) => {
+          console.error("*** DAILY SENT AN ERROR!", e);
+          if (e.error?.details?.sourceError) {
+            console.log("*** Original Error", e.error?.details?.sourceError);
+          }
+        });
+      }
+
+      function setupIFrame() {
+        let iframeEl = document.createElement("iframe");
+        // special-case for old Electron for Figma
+        if (
+          window.navigator &&
+          window.navigator.userAgent.match(/Chrome\/61\./)
+        ) {
+          iframeEl.allow = "microphone, camera";
+        } else {
+          iframeEl.allow = "microphone; camera; autoplay; display-capture";
+        }
+        iframeEl.style.visibility = "hidden";
+        iframeEl.style.border = "2px rgb(27, 235, 185)";
+        iframeEl.style.borderStyle = "none";
+        iframeEl.frameBorder = "None";
+        document.body.appendChild(iframeEl);
+        iframeEl.style.visibility = null;
+        window.speakerFrame = iframeEl;
+        setupChildListeners();
+      }
+
+      function setupChildListeners() {
+        window.addEventListener("message", function (evt) {
+          if (evt.data?.from !== "your favorite child") return;
+          console.log("*** i got me a message from my kid!");
+          switch (evt.data?.action) {
+            case "speaker-unmuted":
+              speakerFrame.style.borderStyle = "solid";
+              break;
+            case "speaker-muted":
+              speakerFrame.style.borderStyle = "none";
+              break;
+            case "speaker-joined":
+              window.speakerId = evt.data.speakerId;
+              break;
+          }
+        });
+      }
+
+      async function join(room) {
+        try {
+          const domain = queryParams.get("domain");
+
+          speakerFrame.src = "./listener_frame.html";
+
+          url = `https://${domain}/listener-room-${room}`;
+          console.log("*** JOIN ", url);
+          await call.join({ url });
+          console.log("*** JOIN SPEAKER ROOM");
+          speakerFrame.contentWindow.postMessage(
+            {
+              from: "main_frame",
+              action: "join",
+              url: `https://${domain}/speaker-room`,
+            },
+            "*"
+          );
+        } catch (e) {
+          console.error("*** JOIN FAILED!", e);
+        }
+      }
+
+      async function joinSpeaker() {
+        try {
+          const domain = queryParams.get("domain");
+
+          speakerFrame.src = "./speaker_frame.html";
+          window.amSpeaker = true;
+
+          url = `https://${domain}/listener-room-1`;
+          console.log("*** JOIN ", url);
+          await call.join({ url });
+          console.log("*** JOIN SPEAKER ROOM AS SPEAKER");
+          speakerFrame.contentWindow.postMessage(
+            {
+              from: "main_frame",
+              action: "join",
+              url: `https://${domain}/speaker-room`,
+              token:
+                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyIjoic3BlYWtlci1yb29tIiwibyI6dHJ1ZSwiZCI6IjU0NWMwNTE5LTZmNGEtNDI0YS04ZWJiLTUyYWY3YjE1NTBjNyIsImlhdCI6MTY4NzI4MjE4N30.IeRjVArUY_U-Q_QI4T6TUbPn-LpKyne9SFjKLeYmDvw",
+            },
+            "*"
+          );
+        } catch (e) {
+          console.error("*** JOIN FAILED!", e);
+        }
+      }
+
+      function displayTrack(evt) {
+        console.log("*** TRACK STARTED", evt);
+        if (
+          window.amSpeaker &&
+          evt.participant.session_id === window.speakerId
+        ) {
+          console.log("*** ignore speaker tracks");
+          return;
+        }
+        if (evt.track.kind === "video") {
+          displayVideo(evt);
+        } else {
+          playAudio(evt);
+        }
+      }
+
+      function displayVideo(evt) {
+        console.log("*** displayVideo() ", evt);
+        let videosDiv = document.getElementById("videos");
+        let videoEl = document.createElement("video");
+        videosDiv.appendChild(videoEl);
+        videoEl.style.width = "100%";
+        videoEl.srcObject = new MediaStream([evt.track]);
+        videoEl.play();
+      }
+
+      function playAudio(evt) {
+        if (evt.participant.local) {
+          return;
+        }
+        let audioEl = document.createElement("audio");
+        document.body.appendChild(audioEl);
+        audioEl.srcObject = new MediaStream([evt.track]);
+        audioEl.play();
+      }
+
+      function destroyTrack(evt) {
+        console.log(
+          "*** TRACK STOPPED",
+          evt.kind,
+          evt.participant && evt.participant.session_id
+        );
+        let els = Array.from(document.getElementsByTagName("video")).concat(
+          Array.from(document.getElementsByTagName("audio"))
+        );
+        for (let el of els) {
+          if (el.srcObject && el.srcObject.getTracks()[0] === evt.track) {
+            el.remove();
+          }
+        }
+      }
+
+      function handleJoin(e) {
+        console.log("*** i joined!", e);
+        console.log("*** participant counts", call.participantCounts());
+      }
+
+      function leave() {
+        speakerFrame.contentWindow.postMessage(
+          {
+            from: "main_frame",
+            action: "leave",
+          },
+          "*"
+        );
+
+        call.leave();
+      }
+
+      function logEvent(evt) {
+        console.log("*** DAILY EVENT!");
+        console.log("***", evt);
+        console.log("*** ----------- ***");
+      }
+    </script>
+  </body>
+</html>

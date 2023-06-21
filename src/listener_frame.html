@@ -1,0 +1,138 @@
+<html>
+  <head>
+    <title>stream local video file</title>
+    <script src="https://unpkg.com/@daily-co/daily-js"></script>
+  </head>
+  <body onload="main()">
+    <div id="videos" height="100%"></div>
+
+    <script>
+      function main() {
+        setupCallObject();
+        setupListeners();
+      }
+
+      function setupCallObject() {
+        console.log("$$$ BABY COMING ON LINE");
+        const urlParams = new URLSearchParams(window.location.search);
+        window.call = DailyIframe.createCallObject({
+          dailyConfig: {
+            v2CamAndMic: true,
+          },
+          startAudioOff: true,
+          startVideoOff: true,
+        });
+        window.callObject = window.call;
+        call.on("track-started", displayTrack);
+        call.on("track-stopped", destroyTrack);
+        call.on("joined-meeting", handleJoin);
+        call.on("error", (e) => {
+          console.error('$$$ DAILY SENT AN ERROR!', e);
+          if (e.error?.details?.sourceError) {
+            console.log('$$$ Original Error', e.error?.details?.sourceError);
+          }
+        });
+      }
+
+      function setupListeners() {
+        window.addEventListener('message', function(evt) {
+          if (evt.data?.from !== 'yo mama') return;
+          console.log('$$$ i got me a message from my mom!', evt);
+          switch (evt.data?.action) {
+            case 'join':
+              join(evt.data.url);
+              break;
+            case 'leave':
+              leave();
+              break;
+          }
+        })
+      }
+
+      function sendMomAMessage(msg) {
+        let newMsg = {...msg, from: 'your favorite child'};
+        console.log('$$$ send mom a message', newMsg)
+        window.parent.postMessage(newMsg, '*');
+      }
+
+      async function join(url) {
+        try {
+          console.log('$$$ JOIN INNER ', url);
+          await call.join({ url });
+        } catch(e) {
+          console.error ('$$$ JOIN FAILED!', e);
+        }
+      }
+
+
+      function displayTrack(evt) {
+        console.log("$$$ TRACK STARTED", evt);
+        if (evt.track.kind === "video") {
+          if (evt.participant.tracks.audio.state !== 'playable') {
+            sendMomAMessage({ action: 'speaker-unmuted'});
+          }
+          displayVideo(evt);
+        } else {
+          if (evt.participant.tracks.video.state !== 'playable') {
+            sendMomAMessage({ action: 'speaker-unmuted'});
+          }
+          playAudio(evt);
+        }
+      }
+
+      function displayVideo(evt) {
+        console.log('$$$', evt);
+        let videosDiv = document.getElementById("videos");
+        let videoEl = document.createElement("video");
+        videosDiv.appendChild(videoEl);
+        videoEl.style.height = "100%";
+        videoEl.srcObject = new MediaStream([evt.track]);
+        videoEl.play();
+      }
+
+      function playAudio(evt) {
+        if (evt.participant.local) {
+          return;
+        }
+        let audioEl = document.createElement("audio");
+        document.body.appendChild(audioEl);
+        audioEl.srcObject = new MediaStream([evt.track]);
+        audioEl.play();
+      }
+
+      function destroyTrack(evt) {
+        console.log("$$$ TRACK STOPPED", evt);
+        if (evt.track.kind === "video") {
+            if (evt.participant.tracks.audio.state !== 'playable') {
+              sendMomAMessage({ action: 'speaker-muted' });
+            }
+        } else if (evt.participant.tracks.video.state !== 'playable') {
+          sendMomAMessage({ action: 'speaker-muted' });
+        }
+        let els = Array.from(document.getElementsByTagName("video")).concat(
+          Array.from(document.getElementsByTagName("audio"))
+        );
+        for (let el of els) {
+          if (el.srcObject && el.srcObject.getTracks()[0] === evt.track) {
+            el.remove();
+          }
+        }
+      }
+
+      function handleJoin(e) {
+        console.log('$$$ i joined!', e);
+        console.log('$$$ participant counts', call.participantCounts());
+      }
+
+      function leave() {
+        call.leave();
+      }
+
+      function logEvent(evt) {
+        console.log('$$$ DAILY EVENT!');
+        console.log('$$$', evt);
+        console.log('$$$ ----------- $$$');
+      }
+    </script>
+  </body>
+</html>
