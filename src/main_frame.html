@@ -21,10 +21,8 @@
       }
 
       function setupCallObject() {
-        const urlParams = new URLSearchParams(window.location.search);
         window.call = DailyIframe.createCallObject({
           dailyConfig: {
-            url,
             v2CamAndMic: true,
           },
           startAudioOff: true,
@@ -64,8 +62,8 @@
 
       function setupChildListeners() {
         window.addEventListener("message", function (evt) {
-          if (evt.data?.from !== "your favorite child") return;
-          console.log("*** i got me a message from my kid!");
+          if (evt.data?.from !== "listener_frame") return;
+          console.log("*** message received from listener_frame!");
           switch (evt.data?.action) {
             case "speaker-unmuted":
               speakerFrame.style.borderStyle = "solid";
@@ -82,11 +80,12 @@
 
       async function join(room) {
         try {
-          const domain = queryParams.get("domain");
+          const urlParams = new URLSearchParams(window.location.search);
+          const domain = urlParams.get("domain");
 
           speakerFrame.src = "./listener_frame.html";
 
-          url = `https://${domain}/listener-room-${room}`;
+          url = `https://${domain}.daily.co/listener-room-${room}`;
           console.log("*** JOIN ", url);
           await call.join({ url });
           console.log("*** JOIN SPEAKER ROOM");
@@ -94,7 +93,7 @@
             {
               from: "main_frame",
               action: "join",
-              url: `https://${domain}/speaker-room`,
+              url: `https://${domain}.daily.co/speaker-room`,
             },
             "*"
           );
@@ -105,12 +104,13 @@
 
       async function joinSpeaker() {
         try {
-          const domain = queryParams.get("domain");
+          const urlParams = new URLSearchParams(window.location.search);
+          const domain = urlParams.get("domain");
 
           speakerFrame.src = "./speaker_frame.html";
           window.amSpeaker = true;
 
-          url = `https://${domain}/listener-room-1`;
+          url = `https://${domain}.daily.co/listener-room-1`;
           console.log("*** JOIN ", url);
           await call.join({ url });
           console.log("*** JOIN SPEAKER ROOM AS SPEAKER");
@@ -118,9 +118,7 @@
             {
               from: "main_frame",
               action: "join",
-              url: `https://${domain}/speaker-room`,
-              token:
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyIjoic3BlYWtlci1yb29tIiwibyI6dHJ1ZSwiZCI6IjU0NWMwNTE5LTZmNGEtNDI0YS04ZWJiLTUyYWY3YjE1NTBjNyIsImlhdCI6MTY4NzI4MjE4N30.IeRjVArUY_U-Q_QI4T6TUbPn-LpKyne9SFjKLeYmDvw",
+              url: `https://${domain}.daily.co/speaker-room`,
             },
             "*"
           );

@@ -4,12 +4,9 @@
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
   </head>
   <body onload="main()">
-    <input
-      type="checkbox"
-      id="broadcast_btn",
-      onclick="toggleBroadcast()">
-      broadcast
-    </input>
+    <label for="broadcast_btn">Broadcast</label>
+    <input type="checkbox" id="broadcast_btn" , onclick="toggleBroadcast()" />
+
     <hr />
     <div id="videos"></div>
 
@@ -28,69 +25,71 @@
           },
           startAudioOff: true,
           startVideoOff: true,
-          userName: 'speaker',
+          userName: "speaker",
         });
         window.callObject = window.call;
         call.on("track-started", displayTrack);
         call.on("track-stopped", destroyTrack);
         call.on("joined-meeting", handleJoin);
         call.on("error", (e) => {
-          console.error('$$$ DAILY SENT AN ERROR!', e);
+          console.error("$$$ DAILY SENT AN ERROR!", e);
           if (e.error?.details?.sourceError) {
-            console.log('$$$ Original Error', e.error?.details?.sourceError);
+            console.log("$$$ Original Error", e.error?.details?.sourceError);
           }
         });
       }
 
       function setupListeners() {
-        window.addEventListener('message', function(evt) {
-          if (evt.data?.from !== 'yo mama') return;
-          console.log('$$$ i got me a message from my mom!', evt);
+        window.addEventListener("message", function (evt) {
+          if (evt.data?.from !== "main_frame") return;
+          console.log("$$$ received message from parent!", evt);
           switch (evt.data?.action) {
-            case 'join':
+            case "join":
               join(evt.data.url, evt.data.token);
               break;
-            case 'leave':
+            case "leave":
               leave();
               break;
           }
-        })
+        });
       }
 
-      function sendMomAMessage(msg) {
-        let newMsg = {...msg, from: 'your favorite child'};
-        console.log('$$$ send mom a message', newMsg)
-        window.parent.postMessage(newMsg, '*');
+      function sendParentAMessage(msg) {
+        let newMsg = { ...msg, from: "listener_frame" };
+        console.log("$$$ send parent a message", newMsg);
+        window.parent.postMessage(newMsg, "*");
       }
 
       async function join(url, token) {
         try {
-          console.log('$$$ JOIN INNER ', url, token);
+          console.log("$$$ JOIN INNER ", url, token);
           await call.join({ url, token });
-          // sendMomAMessage({ action: 'speaker-joined', speakerId: call.participants().local.session_id });
-        } catch(e) {
-          console.error ('$$$ JOIN FAILED!', e);
+          sendParentAMessage({
+            action: "speaker-joined",
+            speakerId: call.participants().local.session_id,
+          });
+        } catch (e) {
+          console.error("$$$ JOIN FAILED!", e);
         }
       }
-
 
       function displayTrack(evt) {
         console.log("$$$ TRACK STARTED", evt);
         if (evt.track.kind === "video") {
-          if (evt.participant.tracks.audio.state !== 'playable') {
-            sendMomAMessage({ action: 'speaker-unmuted'});
+          if (evt.participant.tracks.audio.state !== "playable") {
+            sendParentAMessage({ action: "speaker-unmuted" });
           }
           displayVideo(evt);
         } else {
-          if (evt.participant.tracks.video.state !== 'playable') {
-            sendMomAMessage({ action: 'speaker-unmuted'});
+          if (evt.participant.tracks.video.state !== "playable") {
+            sendParentAMessage({ action: "speaker-unmuted" });
           }
           playAudio(evt);
         }
       }
 
       function displayVideo(evt) {
-        console.log('$$$', evt);
+        console.log("$$$", evt);
         let videosDiv = document.getElementById("videos");
         let videoEl = document.createElement("video");
         videosDiv.appendChild(videoEl);
@@ -112,11 +111,11 @@
       function destroyTrack(evt) {
         console.log("$$$ TRACK STOPPED", evt);
         if (evt.track.kind === "video") {
-            if (evt.participant.tracks.audio.state !== 'playable') {
-              sendMomAMessage({ action: 'speaker-muted' });
-            }
-        } else if (evt.participant.tracks.video.state !== 'playable') {
-          sendMomAMessage({ action: 'speaker-muted' });
+          if (evt.participant.tracks.audio.state !== "playable") {
+            sendParentAMessage({ action: "speaker-muted" });
+          }
+        } else if (evt.participant.tracks.video.state !== "playable") {
+          sendParentAMessage({ action: "speaker-muted" });
         }
         let els = Array.from(document.getElementsByTagName("video")).concat(
           Array.from(document.getElementsByTagName("audio"))
@@ -129,13 +128,13 @@
       }
 
       function handleJoin(e) {
-        console.log('$$$ i joined!', e);
-        console.log('$$$ participant counts', call.participantCounts());
+        console.log("$$$ i joined!", e);
+        console.log("$$$ participant counts", call.participantCounts());
       }
 
       function toggleBroadcast() {
-        let btn = document.getElementById('broadcast_btn');
-        console.log('$$$ BUTTN CLICKED', btn.checked);
+        console.log("$$$ toggle broadcast clicked");
+        let btn = document.getElementById("broadcast_btn");
         call.setLocalAudio(btn.checked);
         call.setLocalVideo(btn.checked);
       }
@@ -145,9 +144,9 @@
       }
 
       function logEvent(evt) {
-        console.log('$$$ DAILY EVENT!');
-        console.log('$$$', evt);
-        console.log('$$$ ----------- $$$');
+        console.log("$$$ DAILY EVENT!");
+        console.log("$$$", evt);
+        console.log("$$$ ----------- $$$");
       }
     </script>
   </body>

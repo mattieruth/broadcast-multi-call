@@ -13,8 +13,7 @@
       }
 
       function setupCallObject() {
-        console.log("$$$ BABY COMING ON LINE");
-        const urlParams = new URLSearchParams(window.location.search);
+        console.log("*** listener_frame: setupCallObject");
         window.call = DailyIframe.createCallObject({
           dailyConfig: {
             v2CamAndMic: true,
@@ -27,61 +26,60 @@
         call.on("track-stopped", destroyTrack);
         call.on("joined-meeting", handleJoin);
         call.on("error", (e) => {
-          console.error('$$$ DAILY SENT AN ERROR!', e);
+          console.error("$$$ DAILY SENT AN ERROR!", e);
           if (e.error?.details?.sourceError) {
-            console.log('$$$ Original Error', e.error?.details?.sourceError);
+            console.log("$$$ Original Error", e.error?.details?.sourceError);
           }
         });
       }
 
       function setupListeners() {
-        window.addEventListener('message', function(evt) {
-          if (evt.data?.from !== 'yo mama') return;
-          console.log('$$$ i got me a message from my mom!', evt);
+        window.addEventListener("message", function (evt) {
+          if (evt.data?.from !== "main_frame") return;
+          console.log("$$$ received message from parent!", evt);
           switch (evt.data?.action) {
-            case 'join':
+            case "join":
               join(evt.data.url);
               break;
-            case 'leave':
+            case "leave":
               leave();
               break;
           }
-        })
+        });
       }
 
-      function sendMomAMessage(msg) {
-        let newMsg = {...msg, from: 'your favorite child'};
-        console.log('$$$ send mom a message', newMsg)
-        window.parent.postMessage(newMsg, '*');
+      function sendParentAMessage(msg) {
+        let newMsg = { ...msg, from: "listener_frame" };
+        console.log("$$$ send main_frame a message", newMsg);
+        window.parent.postMessage(newMsg, "*");
       }
 
       async function join(url) {
         try {
-          console.log('$$$ JOIN INNER ', url);
+          console.log("$$$ JOIN INNER ", url);
           await call.join({ url });
-        } catch(e) {
-          console.error ('$$$ JOIN FAILED!', e);
+        } catch (e) {
+          console.error("$$$ JOIN FAILED!", e);
         }
       }
-
 
       function displayTrack(evt) {
         console.log("$$$ TRACK STARTED", evt);
         if (evt.track.kind === "video") {
-          if (evt.participant.tracks.audio.state !== 'playable') {
-            sendMomAMessage({ action: 'speaker-unmuted'});
+          if (evt.participant.tracks.audio.state !== "playable") {
+            sendParentAMessage({ action: "speaker-unmuted" });
           }
           displayVideo(evt);
         } else {
-          if (evt.participant.tracks.video.state !== 'playable') {
-            sendMomAMessage({ action: 'speaker-unmuted'});
+          if (evt.participant.tracks.video.state !== "playable") {
+            sendParentAMessage({ action: "speaker-unmuted" });
           }
           playAudio(evt);
         }
       }
 
       function displayVideo(evt) {
-        console.log('$$$', evt);
+        console.log("$$$", evt);
         let videosDiv = document.getElementById("videos");
         let videoEl = document.createElement("video");
         videosDiv.appendChild(videoEl);
@@ -103,11 +101,11 @@
       function destroyTrack(evt) {
         console.log("$$$ TRACK STOPPED", evt);
         if (evt.track.kind === "video") {
-            if (evt.participant.tracks.audio.state !== 'playable') {
-              sendMomAMessage({ action: 'speaker-muted' });
-            }
-        } else if (evt.participant.tracks.video.state !== 'playable') {
-          sendMomAMessage({ action: 'speaker-muted' });
+          if (evt.participant.tracks.audio.state !== "playable") {
+            sendParentAMessage({ action: "speaker-muted" });
+          }
+        } else if (evt.participant.tracks.video.state !== "playable") {
+          sendParentAMessage({ action: "speaker-muted" });
         }
         let els = Array.from(document.getElementsByTagName("video")).concat(
           Array.from(document.getElementsByTagName("audio"))
@@ -120,8 +118,8 @@
       }
 
       function handleJoin(e) {
-        console.log('$$$ i joined!', e);
-        console.log('$$$ participant counts', call.participantCounts());
+        console.log("$$$ i joined!", e);
+        console.log("$$$ participant counts", call.participantCounts());
       }
 
       function leave() {
@@ -129,9 +127,9 @@
       }
 
       function logEvent(evt) {
-        console.log('$$$ DAILY EVENT!');
-        console.log('$$$', evt);
-        console.log('$$$ ----------- $$$');
+        console.log("$$$ DAILY EVENT!");
+        console.log("$$$", evt);
+        console.log("$$$ ----------- $$$");
       }
     </script>
   </body>
