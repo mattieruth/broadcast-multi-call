@@ -1,18 +1,17 @@
 {
   "name": "broadcast-multi-call",
-  "type": "module",
   "version": "0.0.0",
   "description": "Broadcast multi call demo",
   "main": "index.js",
   "scripts": {
     "create-rooms": "./scripts/create-rooms.js",
-    "start": "serve -l 8015 src/"
+    "start": "source .env && http-server -p 8015 -o src/main_frame.html"
   },
   "author": "James Hush <james@daily.co> (https://www.daily.co/)",
   "license": "MIT",
   "dependencies": {
     "dotenv": "^16.3.1",
-    "serve": "^14.2.0"
+    "http-server": "^14.1.1"
   },
   "devDependencies": {
     "@types/node": "^20.3.1"

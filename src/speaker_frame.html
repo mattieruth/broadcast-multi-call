@@ -18,7 +18,6 @@
 
       function setupCallObject() {
         console.log("$$$ SPEAKER COMING ON LINE");
-        const urlParams = new URLSearchParams(window.location.search);
         window.call = DailyIframe.createCallObject({
           dailyConfig: {
             v2CamAndMic: true,
